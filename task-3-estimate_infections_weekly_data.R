@@ -1,0 +1,311 @@
+## Estimate Effective Reproduction Number (Rt) from Weekly Reported Confirmed Cases
+
+# This script aims to estimate Rt from weekly reported SARS-CoV-2 infections
+# in the UK using EpiNow2 and EpiEstim. The EpiEstim example follows the
+# methodology outlined in the EpiEstim vignette in
+# https://mrc-ide.github.io/EpiEstim/articles/EpiEstim_aggregated_data.html.
+# maintained in
+# how-to guide: https://epiverse-trace.github.io/howto/analyses/reconstruct_transmission/estimate-infections-weekly.html
+
+# ============================================================================== #
+# SETUP AND DATA PREPARATION
+# ============================================================================== #
+
+# This script aims to estimate Rt from weekly reported SARS-CoV-2 infections
+# in the UK using EpiNow2 and EpiEstim. The EpiEstim example follows the
+# methodology outlined in the EpiEstim vignette in
+# https://mrc-ide.github.io/EpiEstim/articles/EpiEstim_aggregated_data.html.
+
+# Load necessary packages for analysis
+library(EpiNow2) # To estimate time-varying reproduction number
+library(EpiEstim) # To estimate time-varying reproduction number
+library(epiparameter) # To extract epidemiological parameters
+library(data.table) # For data manipulation
+library(parallel) # For parallel processing
+library(withr) # For setting local options
+library(dplyr) # For data manipulation
+library(ggplot2) # For data visualisation
+library(janitor) # For data cleaning
+
+# Set the number of cores for faster processing
+withr::local_options(list(mc.cores = parallel::detectCores() - 1))
+
+# Use the example data for confirmed cases from EpiNow2
+reported_cases <- EpiNow2::example_confirmed
+
+# Aggregate the daily cases to weekly cases (sum of daily cases)
+reported_cases_weekly <- incidence2::incidence(as.data.frame(reported_cases),
+                                               date_index = "date", counts = "confirm", interval = "weeks") %>%
+  mutate(date = as.Date(date_index)) %>% 
+  select(date, confirm = count)
+
+# ============================================================================== #
+# DEFINE EPIDEMIOLOGICAL PARAMETERS AND DISTRIBUTIONS
+# ============================================================================== #
+
+# Extract distribution the incubation period for COVID-19
+covid_incubation_dist <- epiparameter::epiparameter_db(
+  disease = "covid",
+  epi_name = "incubation",
+  single_epiparameter = TRUE
+)
+
+# Extract the serial interval distribution
+serial_interval_dist <- epiparameter::epiparameter_db(
+  disease = "covid",
+  epi_name = "serial",
+  single_epiparameter = TRUE
+)
+
+# ============================================================================== #
+# ESTIMATE INFECTIONS AND Rt WITH EPINOW2
+# ============================================================================== #
+
+# Extract parameters and maximum of the distribution for EpiNow2
+incubation_params <- epiparameter::get_parameters(covid_incubation_dist)
+incubation_max_days <- round(quantile(covid_incubation_dist, 0.999)) # Upper 99.9% range needed for EpiNow2
+
+# Create a LogNormal object for the incubation period
+incubation_lognormal <- EpiNow2::LogNormal(
+  meanlog = incubation_params[["meanlog"]],
+  sdlog = incubation_params[["sdlog"]],
+  max = incubation_max_days
+)
+
+# Extract parameters and maximum of the distribution for EpiNow2
+serial_interval_params <- epiparameter::get_parameters(serial_interval_dist)
+serial_interval_max_days <- round(quantile(serial_interval_dist, 0.999)) # Upper 99.9% range needed for EpiNow2
+
+# Create a LogNormal object for the serial interval
+serial_interval_lognormal <- EpiNow2::LogNormal(
+  meanlog = serial_interval_params[["meanlog"]],
+  sdlog = serial_interval_params[["sdlog"]],
+  max = serial_interval_max_days
+)
+
+# Create data with missing dates filled in for EpiNow2
+input_data_epinow <- EpiNow2::fill_missing(
+  reported_cases_weekly,
+  missing_dates = "accumulate",
+  initial_accumulate = 1 # Don't model the first data point (to match EpiEstim method)
+)
+
+# Estimate infections using EpiNow2
+estimates_epinow <- EpiNow2::epinow(
+  data = input_data_epinow,
+  generation_time = generation_time_opts(serial_interval_lognormal),
+  forecast = forecast_opts(horizon = 0, accumulate = 1), # Forecasting is turned off to match with EpiEstim
+  rt = rt_opts(
+    prior = Gamma(mean = 5, sd = 5) # same prior as used in EpiEstim default
+  ),
+  CrIs = c(0.025, 0.05, 0.25, 0.75, 0.95, 0.975), # same prior as used in EpiEstim default
+  stan = EpiNow2::stan_opts(samples = 1000, chains = 2), # revert to 4 chains for better inference
+  verbose = FALSE
+)
+
+# Initial look at the output
+plot(estimates_epinow$plots$R)
+
+# ============================================================================== #
+# ESTIMATE RT WITH EPIESTIM
+# ============================================================================== #
+
+# Prepare serial interval distribution. We'll reuse the serial interval distribution
+# extracted earlier.
+si_mean <- serial_interval_dist$summary_stats$mean
+si_sd <- serial_interval_dist$summary_stats$sd
+
+# Prepare the input data
+input_data_epiestim <- reported_cases_weekly |>
+  dplyr::rename(I = confirm) |>
+  dplyr::mutate(
+    dates = as.Date(date),
+    I = as.integer(I)
+  ) |>
+  dplyr::select(I)
+
+# Estimate Rt using weekly aggregated data
+estimates_epiestim <- EpiEstim::estimate_R(
+  incid = input_data_epiestim$I,
+  dt = 7L, # Aggregation window
+  dt_out = 7L, # Estimation rolling window
+  recon_opt = "naive",
+  method = "parametric_si",
+  config = make_config(
+    list(mean_si = si_mean, std_si = si_sd)
+  )
+)
+
+# Initial look at the output
+plot(estimates_epiestim, "R") # Rt estimates only
+
+# ==============================================================================
+# COMPARING THE RESULTS FROM EpiNow2 and EpiEstim
+# ==============================================================================
+# Extract and process the Rt estimates from EpiEstim output
+epiestim_Rt <- estimates_epiestim$R |>
+  dplyr::mutate(method = "EpiEstim")
+
+# Align the Rt estimates with the original dates in the complete time series
+complete_dates <- seq(
+  min(reported_cases_weekly$date),
+  max(reported_cases_weekly$date),
+  1
+)
+
+Rt_ts_epiestim <- data.frame(date = complete_dates) |>
+  dplyr::mutate(lookup = seq_along(complete_dates)) |>
+  dplyr::inner_join(
+    epiestim_Rt,
+    by = join_by(lookup == t_start)
+  ) |>
+  dplyr::select(-c(lookup)) |>
+  janitor::clean_names()
+
+# Extract and process the Rt estimates from EpiNow2 output
+Rt_ts_epinow <- estimates_epinow$estimates$summarised |>
+  dplyr::filter(variable == "R") |>
+  dplyr::filter(date >= min(Rt_ts_epiestim$date, na.rm = TRUE)) |> # Start from EpiEstim's first estimate
+  dplyr::mutate(method = "EpiNow2") |>
+  janitor::clean_names()
+
+# Plot the results
+rt_plot <- ggplot() +
+  # EpiEstim Ribbon
+  geom_ribbon(
+    data = Rt_ts_epiestim,
+    aes(
+      x = date,
+      ymin = quantile_0_25_r,
+      ymax = quantile_0_975_r,
+      fill = method
+    ),
+    alpha = 0.4
+  ) +
+  # EpiEstim Line
+  geom_line(
+    data = Rt_ts_epiestim,
+    aes(
+      x = date,
+      y = mean_r,
+      color = method
+    ),
+    linewidth = 0.55
+  ) +
+  # EpiNow2 Ribbon
+  geom_ribbon(
+    data = Rt_ts_epinow,
+    aes(
+      x = date,
+      ymin = lower_75,
+      ymax = upper_97_5,
+      fill = method
+    ),
+    alpha = 0.4
+  ) +
+  # EpiNow2 Line
+  geom_line(
+    data = Rt_ts_epinow,
+    aes(
+      x = date,
+      y = mean,
+      color = method
+    ),
+    linewidth = 0.55
+  ) +
+  labs(
+    x = "Date",
+    y = expression(R[t]),
+    color = "Method",
+    fill = "Method"
+  ) +
+  scale_fill_manual(
+    values = c(
+      "EpiNow2" = "#E69E90",
+      "EpiEstim" = "#0072B2"
+    )
+  ) +
+  scale_color_manual(
+    values = c(
+      "EpiNow2" = "#AB8199",
+      "EpiEstim" = "#5983AB"
+    )
+  ) +
+  scale_x_date(date_breaks = "month", date_labels = "%b '%y") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+plot(rt_plot)
+
+#' Further exploration
+#' - Now run EpiNow2::epinow() with a delay by adding the following argument. Note what you observe:
+#'    - delay = delay_opts(incubation_lognormal)
+#' - Explore different Rt priors:
+#'    - For EpiEstim::estimate_R(), use the create_config() function
+#'    - For EpiNow2::epinow(), pass the EpiNow2 distribution to rt_opts() as
+#'    was done in the sample above.
+# - Turn off rt estimation in epinow() with rt = NULL. Rt is now back
+#   calculated using deconvolved infections like in EpiEstim. Compare
+#   the results.
+
+# Run EpiNow2 with an explicit delay distribution (incubation period)
+estimates_epinow_delay <- EpiNow2::epinow(
+  data = input_data_epinow,
+  generation_time = generation_time_opts(serial_interval_lognormal),
+  delay = delay_opts(incubation_lognormal),
+  forecast = forecast_opts(horizon = 0, accumulate = 1),
+  rt = rt_opts(
+    prior = Gamma(mean = 5, sd = 5)
+  ),
+  CrIs = c(0.025, 0.05, 0.25, 0.75, 0.95, 0.975),
+  stan = EpiNow2::stan_opts(samples = 1000, chains = 2),
+  verbose = FALSE
+)
+plot(estimates_epinow_delay$plots$R)
+
+# Explore alternative Rt priors in EpiEstim by modifying the configuration
+epiestim_prior_config <- EpiEstim::make_config(
+  list(
+    mean_si = si_mean,
+    std_si = si_sd,
+    mean_prior = 1.5,
+    std_prior = 0.2
+  )
+)
+estimates_epiestim_prior <- EpiEstim::estimate_R(
+  incid = input_data_epiestim$I,
+  dt = 7L,
+  dt_out = 7L,
+  recon_opt = "naive",
+  method = "parametric_si",
+  config = epiestim_prior_config
+)
+plot(estimates_epiestim_prior, "R")
+
+# Explore alternative Rt priors in EpiNow2 by changing the Gamma prior parameters
+estimates_epinow_prior <- EpiNow2::epinow(
+  data = input_data_epinow,
+  generation_time = generation_time_opts(serial_interval_lognormal),
+  forecast = forecast_opts(horizon = 0, accumulate = 1),
+  rt = rt_opts(
+    prior = Gamma(mean = 1.5, sd = 0.2)
+  ),
+  CrIs = c(0.025, 0.05, 0.25, 0.75, 0.95, 0.975),
+  stan = EpiNow2::stan_opts(samples = 1000, chains = 2),
+  verbose = FALSE
+)
+plot(estimates_epinow_prior$plots$R)
+
+# Turn off Rt estimation in EpiNow2 to back-calculate Rt from inferred infections
+estimates_epinow_no_rt <- EpiNow2::epinow(
+  data = input_data_epinow,
+  generation_time = generation_time_opts(serial_interval_lognormal),
+  rt = NULL,
+  forecast = forecast_opts(horizon = 0, accumulate = 1),
+  CrIs = c(0.025, 0.05, 0.25, 0.75, 0.95, 0.975),
+  stan = EpiNow2::stan_opts(samples = 1000, chains = 2),
+  verbose = FALSE
+)
+plot(estimates_epinow_no_rt$plots$infections)
+
+
