@@ -5108,6 +5108,11 @@
       "Maintainer": "Hadley Wickham <hadley@rstudio.com>",
       "Repository": "CRAN"
     },
+    "reactable": {
+      "Package": "reactable",
+      "Version": "0.4.4",
+      "Source": "Repository"
+    },
     "readr": {
       "Package": "readr",
       "Version": "2.1.5",
