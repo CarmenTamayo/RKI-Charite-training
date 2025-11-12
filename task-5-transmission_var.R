@@ -1,18 +1,21 @@
-# HPRU workshop script
-
-## Transmission clusters and superspreading events
-# This script builds on the concepts outlined in these vignettes:
+# Transmission clusters and superspreading events
+#
+# This script simulates an overdispersed outbreak, visualises the resulting
+# contact and transmission networks, fits alternative offspring distributions,
+# and summarises key superspreading indicators such as cluster sizes,
+# transmission concentration, and extinction probabilities.
+#
+# Recommended reading for more details:
 # https://epiverse-trace.github.io/superspreading/articles/epidemic_risk.html
 # https://epiverse-trace.github.io/superspreading/articles/proportion_transmission.html
-# currently maintained in
-# how-to guide: https://epiverse-trace.github.io/howto/analyses/simulate_transmission/superspreading-probability-extintion.html
+# https://epiverse-trace.github.io/howto/analyses/simulate_transmission/superspreading-probability-extintion.html
 
 # Load required R packages ------------------------------------------------
 
-library(simulist)
-library(epicontacts)
-library(superspreading)
-library(fitdistrplus)
+library(simulist) # To simulate outbreaks
+library(epicontacts) # To create and plot contact networks
+library(superspreading) # To estimate superspreading parameters
+library(fitdistrplus) # To fit distribution models
 
 # Choose a seed that results in suitable and reproducible outbreak --------
 
