@@ -15,30 +15,35 @@ library(EpiEstim)  # To estimate Rt from incidence data
 library(tidyverse) # To wrangle data and plot scenario outputs
 library(withr)     # To manage reproducible random seeds and options
 
-# Generate an R estimate with EpiEstim ----------------------------------------
-
-# get 2009 influenza data from school in Pennsylvania
+# Get incidence data -------------------------------------------
+# 2009 influenza data from school in Pennsylvania
 data(Flu2009)
 flu_early_data <- dplyr::filter(Flu2009$incidence, dates < "2009-05-10")
 
-# define a PDF for the distribution of serial intervals
-serial_pdf <- dgamma(seq(0, 25), shape = 2.622, scale = 0.957)
+# Generate an R estimate with EpiEstim ----------------------------------------
 
-# ensure probabilities add up to 1 by normalising them by the sum
-serial_pdf <- serial_pdf / sum(serial_pdf)
-
-# Use EpiEstim to estimate R with uncertainty
-# Uses Gamma distribution by default
-output_R <- EpiEstim::estimate_R(
-  incid = flu_early_data,
-  method = "non_parametric_si",
-  config = make_config(list(si_distr = serial_pdf))
+# Get serial interval distribution from epiparameter
+serial_interval_flu <- epiparameter::epiparameter_db(
+  disease = "influenza",
+  epi_name = "serial",
+  single_epiparameter = TRUE
 )
 
-# Plot output to visualise
+# Input serial interval parameters into EpiEstim to estimate R
+output_R <- EpiEstim::estimate_R(
+  incid = flu_early_data,
+  method = "parametric_si",
+  config = make_config(
+    list(
+      mean_si = serial_interval_flu$summary_stats$mean,
+      std_si = serial_interval_flu$summary_stats$sd
+    )
+  )
+)
+
 plot(output_R, "R")
 
-# get mean mean and sd over time
+# Get reproduction number mean and sd over time
 r_estimate_mean <- mean(output_R$R$`Mean(R)`)
 r_estimate_sd <- mean(output_R$R$`Std(R)`)
 
