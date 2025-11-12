@@ -2,8 +2,10 @@
 #
 # This script simulates an overdispersed outbreak, visualises the resulting
 # contact and transmission networks, fits alternative offspring distributions to outbreak data,
-# and summarises key superspreading indicators such as cluster sizes,
-# transmission concentration, and extinction probabilities.
+# and explores different metrics influenced by superspreading, such as the
+# proportion of secondary cases from different cluster sizes, heterogeneity of transmission,
+# and probability of outbreak extinction. 
+
 #
 # Recommended reading for more details:
 # https://epiverse-trace.github.io/superspreading/articles/epidemic_risk.html
