@@ -1,20 +1,13 @@
 ## Estimate Effective Reproduction Number (Rt) from Weekly Reported Confirmed Cases
 
 # This script aims to estimate Rt from weekly reported SARS-CoV-2 infections
-# in the UK using EpiNow2 and EpiEstim. The EpiEstim example follows the
-# methodology outlined in the EpiEstim vignette in
-# https://mrc-ide.github.io/EpiEstim/articles/EpiEstim_aggregated_data.html.
-# maintained in
-# how-to guide: https://epiverse-trace.github.io/howto/analyses/reconstruct_transmission/estimate-infections-weekly.html
+# in the UK using EpiNow2 and EpiEstim.
+#
+# Recommended reading for more details:
+# https://mrc-ide.github.io/EpiEstim/articles/EpiEstim_aggregated_data.html
+# https://epiverse-trace.github.io/howto/analyses/reconstruct_transmission/estimate-infections-weekly.html
 
-# ============================================================================== #
-# SETUP AND DATA PREPARATION
-# ============================================================================== #
-
-# This script aims to estimate Rt from weekly reported SARS-CoV-2 infections
-# in the UK using EpiNow2 and EpiEstim. The EpiEstim example follows the
-# methodology outlined in the EpiEstim vignette in
-# https://mrc-ide.github.io/EpiEstim/articles/EpiEstim_aggregated_data.html.
+# Setup and data preparation ------------------------------------------------
 
 # Load necessary packages for analysis
 library(EpiNow2) # To estimate time-varying reproduction number
@@ -39,9 +32,7 @@ reported_cases_weekly <- incidence2::incidence(as.data.frame(reported_cases),
   mutate(date = as.Date(date_index)) %>% 
   select(date, confirm = count)
 
-# ============================================================================== #
-# DEFINE EPIDEMIOLOGICAL PARAMETERS AND DISTRIBUTIONS
-# ============================================================================== #
+# Define epidemiological parameters and distributions ----------------------
 
 # Extract distribution the incubation period for COVID-19
 covid_incubation_dist <- epiparameter::epiparameter_db(
@@ -57,9 +48,7 @@ serial_interval_dist <- epiparameter::epiparameter_db(
   single_epiparameter = TRUE
 )
 
-# ============================================================================== #
-# ESTIMATE INFECTIONS AND Rt WITH EPINOW2
-# ============================================================================== #
+# Estimate infections and Rt with EpiNow2 ----------------------------------
 
 # Extract parameters and maximum of the distribution for EpiNow2
 incubation_params <- epiparameter::get_parameters(covid_incubation_dist)
@@ -106,9 +95,7 @@ estimates_epinow <- EpiNow2::epinow(
 # Initial look at the output
 plot(estimates_epinow$plots$R)
 
-# ============================================================================== #
-# ESTIMATE RT WITH EPIESTIM
-# ============================================================================== #
+# Estimate Rt with EpiEstim -------------------------------------------------
 
 # Prepare serial interval distribution. We'll reuse the serial interval distribution
 # extracted earlier.
@@ -139,9 +126,7 @@ estimates_epiestim <- EpiEstim::estimate_R(
 # Initial look at the output
 plot(estimates_epiestim, "R") # Rt estimates only
 
-# ==============================================================================
-# COMPARING THE RESULTS FROM EpiNow2 and EpiEstim
-# ==============================================================================
+# Compare EpiNow2 and EpiEstim results -------------------------------------
 # Extract and process the Rt estimates from EpiEstim output
 epiestim_Rt <- estimates_epiestim$R |>
   dplyr::mutate(method = "EpiEstim")
