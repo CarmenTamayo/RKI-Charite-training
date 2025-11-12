@@ -1,10 +1,13 @@
-# ============================================================================== #
-# SETUP AND DATA PREPARATION
-# ============================================================================== #
+# Estimate SARS-CoV-2 infections from case fatality data
+#
+# This script reconstructs UK infection dynamics using daily death counts,
+# combining incubation and onset-to-death delays with EpiNow2 to infer
+# infections among individuals with fatal outcomes.
+#
+# Recommended reading for more details:
+# https://epiverse-trace.github.io/howto/analyses/reconstruct_transmission/estimate_infections.html
 
-# This script aims to reconstruct the dynamics of SARS-CoV-2 infections in the UK
-# using daily death data. It follows the methodology outlined in the Epiverse-TRACE
-# howto guide: https://epiverse-trace.github.io/howto/analyses/reconstruct_transmission/estimate_infections.html
+# Setup and data preparation ------------------------------------------------
 
 # Load required packages
 library(incidence2) # for uk covid daily deaths
@@ -17,7 +20,7 @@ library(ggplot2) # to generate plots
 withr::local_options(list(mc.cores = 4))
 
 # Extract data on UK COVID deaths and format for EpiNow2
-incidence_data <- incidence2::covidregionaldataUK %>% 
+incidence_data <- incidence2::covidregionaldataUK %>%
   # preprocess missing values
   tidyr::replace_na(list(deaths_new = 0)) %>%
   # compute the daily incidence
@@ -37,7 +40,7 @@ incidence_data <- incidence2::covidregionaldataUK %>%
 # Preview data
 incidence_data
 
-# Define parameters
+# Define delay and serial interval parameters --------------------------------
 # Extract infection-to-death distribution (from Aloon et al)
 incubation_period_in <-
   epiparameter::epiparameter_db(
@@ -116,7 +119,7 @@ serial_interval_covid <- LogNormal(
   sdlog = serial_params[["sdlog"]],
   max = serial_int_discrete_max
 )
-# Run infection estimation model
+# Run infection estimation model --------------------------------------------
 epinow_estimates <- epinow(
   data = incidence_data, # time series data
   # assume generation time = serial interval
@@ -133,7 +136,7 @@ epinow_estimates <- epinow(
 infection_estimates <- epinow_estimates$estimates$summarised %>% 
   dplyr::filter(variable=="infections")
 
-# Plot output
+# Plot output ---------------------------------------------------------------
 epinow_estimates$plots$infections +
   geom_vline(aes(xintercept = as.Date("2020-03-16")), linetype = 3) +
   geom_text(aes(x = as.Date("2020-03-16"), 
