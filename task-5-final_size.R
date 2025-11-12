@@ -1,10 +1,11 @@
-# Simulating epidemic attack rates -------------------------------------------------
-# with heterogeneous social contacts
-# This script builds this vignette:
+# Simulate epidemic attack rates with heterogeneous contacts
+#
+# This script explores how varying contact patterns reshape epidemic final
+# sizes, using social mixing matrices to demonstrate heterogeneity effects.
+#
+# Recommended reading for more details:
 # https://epiverse-trace.github.io/finalsize/articles/varying_contacts.html
-# now maintained in
-# how-to guide: https://epiverse-trace.github.io/howto/analyses/simulate_transmission/finalsize-attack-rate-heterogeneity.html
-
+# https://epiverse-trace.github.io/howto/analyses/simulate_transmission/finalsize-attack-rate-heterogeneity.html
 
 # Load packages --------------------------------------------------------------------
 library(finalsize)  # To compute epidemic attack rates under heterogeneity

@@ -1,10 +1,12 @@
-# Pandemic scenarios with uncertainty -----------------------------------------
-
-# This script builds on the concepts outlined in these vignettes:
+# Simulate pandemic scenarios with uncertainty
+#
+# This script samples Rt uncertainties, projects transmission across scenarios,
+# and explores intervention effects using an age-structured SEIR framework.
+#
+# Recommended reading for more details:
 # https://epiverse-trace.github.io/epidemics/articles/modelling_param_uncertainty.html
 # https://epiverse-trace.github.io/epidemics/articles/modelling_multiple_interventions.html
-# now maintained in
-# how-to guide: https://epiverse-trace.github.io/howto/analyses/simulate_transmission/epidemics-scenarios-uncertainty.html
+# https://epiverse-trace.github.io/howto/analyses/simulate_transmission/epidemics-scenarios-uncertainty.html
 
 
 # Load packages
