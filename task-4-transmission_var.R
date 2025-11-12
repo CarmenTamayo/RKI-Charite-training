@@ -1,7 +1,7 @@
 # Transmission clusters and superspreading events
 #
 # This script simulates an overdispersed outbreak, visualises the resulting
-# contact and transmission networks, fits alternative offspring distributions,
+# contact and transmission networks, fits alternative offspring distributions to outbreak data,
 # and summarises key superspreading indicators such as cluster sizes,
 # transmission concentration, and extinction probabilities.
 #
@@ -33,6 +33,7 @@ outbreak <- simulist::sim_outbreak(
 )
 
 # Plot contact network ----------------------------------------------------
+# Including all contacts from cases, even if these didn't result in disease transmission
 
 contact_net <- epicontacts::make_epicontacts(
   linelist = outbreak$linelist,
@@ -47,6 +48,7 @@ plot(contact_net)
 
 
 # Plot transmission network -----------------------------------------------
+# Including only contacts that resulted in onward transmission
 
 transmission_net <- outbreak$contacts[outbreak$contacts$was_case == TRUE, ]
 
@@ -64,7 +66,8 @@ transmission_net
 plot(transmission_net)
 
 # Extract secondary case data from outbreak -------------------------------
-
+# We create a vector that includes all cases for the complete offspring distribution-
+# zeros for non-transmitters and the observed counts for transmitters.
 contacts <- outbreak$contacts
 
 # subset to contacts that caused transmission
@@ -96,6 +99,7 @@ model_tbl <- superspreading::ic_tbl(
 model_tbl
 
 # Extract parameters from best fit model ----------------------------------
+# These parameters correspond to the reproduction number and the dispersion parameter, k
 
 R <- nbinom_fit$estimate[["mu"]]
 k <- nbinom_fit$estimate[["size"]]
@@ -103,7 +107,13 @@ k <- nbinom_fit$estimate[["size"]]
 # print estimates
 message("R = ", signif(R, digits = 4), "\n", "k = ", signif(k, digits = 4))
 
-# Estimate proportions of cases occur in clusters of >= a given si --------
+# Estimate proportions of cases in different cluster sizes --------
+# The function `proportion_cluster_size` tells us the proportion of cases among
+# all transmission events that originate within a transmission cluster of a 
+# given size, based on specific offspring distribution parameters. 
+# In this case, we look at clusters of 2, 5, and 10 cases, given our R and k values.
+# Despite the low R, given the high heterogeneity in transmission, over 46% of cases
+# happened in clusters of at least 5 people.
 
 superspreading::proportion_cluster_size(
   R = R, 
@@ -113,6 +123,8 @@ superspreading::proportion_cluster_size(
 
 
 # Estimate proportion of cases causing 80% transmission -------------------
+# ~18% of cases are responsible for 80% of secondary infections in this simulated outbreak; 
+# the remaining ~82% of cases together generate only 20% of the spread.
 
 superspreading::proportion_transmission(
   R = R, 
@@ -121,6 +133,9 @@ superspreading::proportion_transmission(
 )
 
 # Estimate probability of outbreak extinction -----------------------------
+# Using a branching process with the previously estimated R and k, we calculate
+# the probability of outbreak extinction in a population with 1 initial infected individual.
+# In this case, given the low R and high dispersion, the probability = 1.
 
 superspreading::probability_extinct(
   R = R,
@@ -128,7 +143,11 @@ superspreading::probability_extinct(
   num_init_infect = 1
 )
 
-# calculate upper confidence interval for R estimate to explore extinction probability
+# Calculate upper confidence interval for R estimate to explore extinction probability
+# We take the higher end of R values to increase the probability of a sustained epidemic,
+# and evaluate the impact of modifying the initial number of infected individuals and
+# the introduction of control measures on the probability of outbreak extinction.
+
 R_upper_bound <- nbinom_fit$estimate[["mu"]] + (qnorm(0.975) * nbinom_fit$sd[["mu"]])
 
 superspreading::probability_extinct(
@@ -146,7 +165,7 @@ superspreading::probability_extinct(
 
 # apply small control measure on transmission to see affect on extinction probability
 superspreading::probability_extinct(
-  R = R,
+  R = R_upper_bound,
   k = k,
   num_init_infect = 10,
   ind_control = 0.1
