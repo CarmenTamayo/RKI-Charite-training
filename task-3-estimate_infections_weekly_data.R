@@ -30,7 +30,7 @@ reported_cases <- EpiNow2::example_confirmed
 reported_cases_weekly <- incidence2::incidence(as.data.frame(reported_cases),
                                                date_index = "date", counts = "confirm", interval = "weeks") %>%
   mutate(date = as.Date(date_index)) %>% 
-  select(date, confirm = count)
+  dplyr::select(date, confirm = count)
 
 # Define epidemiological parameters and distributions ----------------------
 
