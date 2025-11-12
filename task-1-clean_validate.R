@@ -1,4 +1,11 @@
 ## Simulate, clean, validate and plot outbreak data
+#
+# This script generates a line list, introduces common data issues, and
+# demonstrates how to tidy, validate, and standardise epidemiological linelist data
+#
+# Recommended reading for more details:
+# https://epiverse-trace.github.io/cleanepi/
+# https://epiverse-trace.github.io/linelist/
 
 # Load required R packages ------------------------------------------------
 library(simulist)   # To simulate outbreak line lists and contacts
