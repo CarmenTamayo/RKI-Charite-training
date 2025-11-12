@@ -7,9 +7,9 @@
 
 
 # Load packages --------------------------------------------------------------------
-library(finalsize)
-library(socialmixr)
-library(tidyverse)
+library(finalsize)  # To compute epidemic attack rates under heterogeneity
+library(socialmixr) # To obtain age-structured contact matrices
+library(tidyverse)  # To wrangle data and visualise outputs
 
 
 # Simple quick calculation with homogenous mixing ----------------------------------

@@ -10,11 +10,11 @@
 # Setup and data preparation ------------------------------------------------
 
 # Load required packages
-library(incidence2) # for uk covid daily deaths
-library(EpiNow2) # to estimate time-varying reproduction number
-library(epiparameter) # to access delay distributions
-library(dplyr) # to format input and outputs
-library(ggplot2) # to generate plots
+library(incidence2)   # To access UK COVID daily deaths and build incidence curves
+library(EpiNow2)      # To infer infections with time-varying Rt
+library(epiparameter) # To retrieve incubation and delay distributions
+library(dplyr)        # To wrangle and format the data
+library(ggplot2)      # To visualise inferred infections
 
 # Set number of cores
 withr::local_options(list(mc.cores = 4))

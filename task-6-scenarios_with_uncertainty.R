@@ -8,10 +8,10 @@
 
 
 # Load packages
-library(epidemics)
-library(EpiEstim) # for Rt estimation
-library(tidyverse)
-library(withr)
+library(epidemics) # To simulate transmission scenarios under uncertainty
+library(EpiEstim)  # To estimate Rt from incidence data
+library(tidyverse) # To wrangle data and plot scenario outputs
+library(withr)     # To manage reproducible random seeds and options
 
 # Generate an R estimate with EpiEstim ----------------------------------------
 

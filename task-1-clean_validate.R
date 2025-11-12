@@ -1,13 +1,14 @@
 ## Simulate, clean, validate and plot outbreak data
 
 # Load required R packages ------------------------------------------------
-library(simulist)
-library(cleanepi)
-library(numberize)
-library(incidence2)
-library(tibble)
-library(tidyr)
-library(dplyr)
+library(simulist)   # To simulate outbreak line lists and contacts
+library(cleanepi)   # To validate and clean linelist fields
+library(numberize)  # To convert messy text fields into numeric values
+library(linelist)   # To tag and manage linelist metadata
+library(incidence2) # To summarise incidence over time
+library(tibble)     # To organise data as tibbles
+library(tidyr)      # To reshape linelist data tidily
+library(dplyr)      # To manipulate and summarise data frames
 
 # Choose a seed that results in suitable and reproducible outbreak --------
 set.seed(1)

@@ -10,15 +10,15 @@
 # Setup and data preparation ------------------------------------------------
 
 # Load necessary packages for analysis
-library(EpiNow2) # To estimate time-varying reproduction number
-library(EpiEstim) # To estimate time-varying reproduction number
+library(EpiNow2)      # To estimate Rt
+library(EpiEstim)     # To estimate Rt 
 library(epiparameter) # To extract epidemiological parameters
-library(data.table) # For data manipulation
-library(parallel) # For parallel processing
-library(withr) # For setting local options
-library(dplyr) # For data manipulation
-library(ggplot2) # For data visualisation
-library(janitor) # For data cleaning
+library(data.table)   # To manipulate incidence data efficiently
+library(parallel)     # To parallelise computationally intensive steps
+library(withr)        # To set local options (e.g., cores) safely
+library(dplyr)        # To tidy and summarise incidence data
+library(ggplot2)      # To visualise Rt trajectories
+library(janitor)      # To clean column names and outputs
 
 # Set the number of cores for faster processing
 withr::local_options(list(mc.cores = parallel::detectCores() - 1))

@@ -12,10 +12,10 @@
 
 # Load required R packages ------------------------------------------------
 
-library(simulist) # To simulate outbreaks
-library(epicontacts) # To create and plot contact networks
-library(superspreading) # To estimate superspreading parameters
-library(fitdistrplus) # To fit distribution models
+library(simulist)       # To simulate stochastic outbreaks with overdispersion
+library(epicontacts)    # To build and visualise contact networks
+library(superspreading) # To quantify superspreading metrics and probabilities
+library(fitdistrplus)   # To fit offspring and transmission distributions
 
 # Choose a seed that results in suitable and reproducible outbreak --------
 
